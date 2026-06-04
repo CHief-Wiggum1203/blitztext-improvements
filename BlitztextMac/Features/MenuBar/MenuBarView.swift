@@ -111,6 +111,22 @@ struct MenuBarView: View {
                         appState.startWorkflow(type)
                     }
                 }
+
+                if !appState.appSettings.customWorkflows.isEmpty {
+                    Divider()
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 4)
+
+                    ForEach(appState.appSettings.customWorkflows) { customWorkflow in
+                        let enabled = appState.isCustomWorkflowAvailable(customWorkflow)
+                        CustomWorkflowRowView(
+                            customWorkflow: customWorkflow,
+                            enabled: enabled
+                        ) {
+                            appState.startCustomWorkflow(customWorkflow, source: .manual)
+                        }
+                    }
+                }
             }
             .padding(.vertical, 2)
 
