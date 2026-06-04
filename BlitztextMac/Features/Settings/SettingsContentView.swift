@@ -703,16 +703,8 @@ struct CustomizeSettingsView: View {
                 SectionLabel(text: "Tastenk\u{00FC}rzel")
 
                 VStack(spacing: 6) {
-                    ForEach(WorkflowType.mainMenuCases) { type in
-                        HStack {
-                            Text(type.hotkeyLabel)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 124, alignment: .leading)
-                            Text(appState.displayName(for: type))
-                                .font(.system(size: 11.5, weight: .medium))
-                            Spacer()
-                        }
+                    ForEach(WorkflowType.allCases) { workflowType in
+                        HotkeyRecorderRow(workflowType: workflowType, appState: appState)
                     }
                 }
 
