@@ -124,6 +124,7 @@ struct AppSettings: Codable {
     var hasAutoSelectedFastLocalModel: Bool = false
     var llmBackend: LLMBackend = .openAI
     var hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
+    var customWorkflows: [CustomWorkflow] = []
 
     init(
         hotkeyMode: HotkeyMode = .hold,
@@ -132,7 +133,8 @@ struct AppSettings: Codable {
         selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName,
         hasAutoSelectedFastLocalModel: Bool = false,
         llmBackend: LLMBackend = .openAI,
-        hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
+        hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value },
+        customWorkflows: [CustomWorkflow] = []
     ) {
         self.hotkeyMode = hotkeyMode
         self.hasSeenOnboarding = hasSeenOnboarding
@@ -141,6 +143,7 @@ struct AppSettings: Codable {
         self.hasAutoSelectedFastLocalModel = hasAutoSelectedFastLocalModel
         self.llmBackend = llmBackend
         self.hotkeyBindings = hotkeyBindings
+        self.customWorkflows = customWorkflows
     }
 
     enum CodingKeys: String, CodingKey {
@@ -151,6 +154,7 @@ struct AppSettings: Codable {
         case hasAutoSelectedFastLocalModel
         case llmBackend
         case hotkeyBindings
+        case customWorkflows
     }
 
     init(from decoder: Decoder) throws {
@@ -169,6 +173,7 @@ struct AppSettings: Codable {
         llmBackend = try container.decodeIfPresent(LLMBackend.self, forKey: .llmBackend) ?? .openAI
         hotkeyBindings = try container.decodeIfPresent([String: HotkeyBinding].self, forKey: .hotkeyBindings)
             ?? HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
+        customWorkflows = try container.decodeIfPresent([CustomWorkflow].self, forKey: .customWorkflows) ?? []
     }
 }
 

@@ -50,6 +50,11 @@ final class OpenAILLMProvider: LLMProvider {
         try await complete(text: text, systemPrompt: buildEmojiPrompt(density: settings.emojiDensity), model: .fast, temperature: 0.3)
     }
 
+    func applyCustom(text: String, prompt: String, modelPreference: ModelPreference) async throws -> String {
+        let model: Model = (modelPreference == .full) ? .full : .fast
+        return try await complete(text: text, systemPrompt: prompt, model: model, temperature: 0.3)
+    }
+
     private func complete(text: String, systemPrompt: String, model: Model, temperature: Double) async throws -> String {
         guard let apiKey = KeychainService.load(key: .openAIAPIKey) else {
             throw LLMError.notConfigured
