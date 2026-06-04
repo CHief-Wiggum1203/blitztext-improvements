@@ -877,6 +877,38 @@ struct CustomizeSettingsView: View {
                 }
             }
 
+            // MARK: Eigene Workflows
+            VStack(alignment: .leading, spacing: 10) {
+                SectionLabel(text: "Eigene Workflows")
+
+                if appState.appSettings.customWorkflows.isEmpty {
+                    Text("Noch keine eigenen Workflows. Lege bis zu 5 an.")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(appState.appSettings.customWorkflows) { workflow in
+                            CustomWorkflowEditorRow(
+                                workflowID: workflow.id,
+                                appState: appState
+                            )
+                        }
+                    }
+                }
+
+                Button {
+                    let new = CustomWorkflow()
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        appState.appSettings.customWorkflows.append(new)
+                    }
+                } label: {
+                    Label("Workflow hinzufügen", systemImage: "plus")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(SubtleButtonStyle())
+                .disabled(appState.appSettings.customWorkflows.count >= 5)
+            }
+
         }
         .padding(16)
     }
