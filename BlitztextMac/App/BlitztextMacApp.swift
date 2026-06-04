@@ -64,16 +64,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func handleHotkeyEvent(_ event: HotkeyEvent) {
         switch event {
-        case .down(let type):
-            handleHotkeyDown(type)
-        case .up(let type):
-            handleHotkeyUp(type)
+        case .down(let id):
+            handleHotkeyDown(id)
+        case .up(let id):
+            handleHotkeyUp(id)
         case .cancel:
             handleHotkeyCancel()
         }
     }
 
-    private func handleHotkeyDown(_ type: WorkflowType) {
+    private func handleHotkeyDown(_ id: String) {
+        if let type = WorkflowType(rawValue: id) {
+            handleBuiltInHotkeyDown(type)
+        } else if let uuid = CustomWorkflow.parseHotkeyBindingKey(id) {
+            // TODO (Task 5): launch CustomWorkflow with this UUID.
+            guard appState.appSettings.customWorkflows.contains(where: { $0.id == uuid }) else { return }
+            // Intentionally no-op for Task 4.
+        }
+        // Unknown id: ignore.
+    }
+
+    private func handleBuiltInHotkeyDown(_ type: WorkflowType) {
         guard appState.isConfigured else { return }
 
         let mode = appState.appSettings.hotkeyMode
@@ -97,7 +108,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
 
-    private func handleHotkeyUp(_ type: WorkflowType) {
+    private func handleHotkeyUp(_ id: String) {
+        if let type = WorkflowType(rawValue: id) {
+            handleBuiltInHotkeyUp(type)
+        } else if CustomWorkflow.parseHotkeyBindingKey(id) != nil {
+            // TODO (Task 5): handle hold-mode key release for custom workflows.
+        }
+        // Unknown id: ignore.
+    }
+
+    private func handleBuiltInHotkeyUp(_ type: WorkflowType) {
         let mode = appState.appSettings.hotkeyMode
 
         guard mode == .hold else { return }

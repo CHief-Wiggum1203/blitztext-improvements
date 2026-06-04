@@ -53,12 +53,19 @@ struct HotkeyRecorderRow: View {
         guard !isRecording else { return }
         conflictWarning = nil
         isRecording = true
-        appState.hotkeyService.startRecording(for: workflowType) { newBinding in
+        appState.hotkeyService.startRecording(for: workflowType.rawValue) { newBinding in
             isRecording = false
-            // Conflict detection: check if this combo is used by another workflow
-            for (otherType, binding) in appState.hotkeyService.bindings {
-                if otherType != workflowType && binding == newBinding {
-                    conflictWarning = "Bereits belegt von: \(otherType.displayName)"
+            // Conflict detection: check if this combo is used by another workflow (built-in or custom)
+            for (otherKey, binding) in appState.hotkeyService.bindings {
+                if otherKey != workflowType.rawValue && binding == newBinding {
+                    if let other = WorkflowType(rawValue: otherKey) {
+                        conflictWarning = "Bereits belegt von: \(other.displayName)"
+                    } else if let uuid = CustomWorkflow.parseHotkeyBindingKey(otherKey),
+                              let cw = appState.appSettings.customWorkflows.first(where: { $0.id == uuid }) {
+                        conflictWarning = "Bereits belegt von: \(cw.name)"
+                    } else {
+                        conflictWarning = "Bereits belegt."
+                    }
                     return
                 }
             }

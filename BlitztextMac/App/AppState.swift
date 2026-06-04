@@ -41,7 +41,7 @@ final class AppState {
             if oldValue.llmBackend != appSettings.llmBackend {
                 llmProvider = LLMService.makeProvider(backend: appSettings.llmBackend)
             }
-            hotkeyService.updateBindings(appSettings.hotkeyBindings)
+            hotkeyService.updateBindings(mergedHotkeyBindings())
             saveSettings()
             prewarmLocalTranscriptionIfNeeded()
         }
@@ -85,7 +85,7 @@ final class AppState {
         self.textImprovementSettings = Self.loadTextImprovementSettings()
         self.dampfAblassenSettings = Self.loadDampfAblassenSettings()
         self.emojiTextSettings = Self.loadEmojiTextSettings()
-        hotkeyService.updateBindings(loadedAppSettings.hotkeyBindings)
+        hotkeyService.updateBindings(Self.mergedHotkeyBindings(for: loadedAppSettings))
         refreshAccessibilityPermission()
         autoSelectFastLocalModelIfNeeded()
         prewarmLocalTranscriptionIfNeeded()
@@ -427,6 +427,23 @@ final class AppState {
     private static func loadContainer() -> SettingsContainer? {
         guard let data = try? Data(contentsOf: settingsURL) else { return nil }
         return try? JSONDecoder().decode(SettingsContainer.self, from: data)
+    }
+
+    /// Merges built-in workflow hotkeys with custom workflow hotkeys into a single
+    /// `[String: HotkeyBinding]` map keyed by either `WorkflowType.rawValue` or
+    /// `CustomWorkflow.hotkeyBindingKey` (`"custom:<uuid>"`).
+    private func mergedHotkeyBindings() -> [String: HotkeyBinding] {
+        Self.mergedHotkeyBindings(for: appSettings)
+    }
+
+    private static func mergedHotkeyBindings(for settings: AppSettings) -> [String: HotkeyBinding] {
+        var merged = settings.hotkeyBindings
+        for cw in settings.customWorkflows {
+            if let hk = cw.hotkey {
+                merged[cw.hotkeyBindingKey] = hk
+            }
+        }
+        return merged
     }
 
     func refreshAccessibilityPermission() {

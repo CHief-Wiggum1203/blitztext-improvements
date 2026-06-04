@@ -105,25 +105,26 @@ enum HotkeyMode: String, Codable, CaseIterable, Identifiable {
 }
 
 enum HotkeyEvent {
-    case down(WorkflowType)  // Keys pressed
-    case up(WorkflowType)    // Keys released (for hold mode)
-    case cancel              // Escape pressed
+    case down(String)  // Keys pressed; id is WorkflowType.rawValue or "custom:<uuid>"
+    case up(String)    // Keys released (for hold mode)
+    case cancel        // Escape pressed
 }
 
 @Observable
 @MainActor
 final class HotkeyService {
-    var bindings: [WorkflowType: HotkeyBinding] = HotkeyBinding.defaults
+    var bindings: [String: HotkeyBinding] = HotkeyBinding.defaults
+        .reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
 
     private var globalFlagsMonitor: Any?
     private var localFlagsMonitor: Any?
     private var globalKeyDownMonitor: Any?
     private var globalKeyUpMonitor: Any?
-    private var activeCombo: WorkflowType?
+    private var activeCombo: String?
     private var lastRecordedFlags: NSEvent.ModifierFlags = []
 
     // Recording state
-    private var recordingFor: WorkflowType?
+    private var recordingFor: String?
     private var recordingCompletion: ((HotkeyBinding) -> Void)?
 
     var onHotkeyEvent: ((HotkeyEvent) -> Void)?
@@ -155,19 +156,11 @@ final class HotkeyService {
     }
 
     func updateBindings(_ newBindings: [String: HotkeyBinding]) {
-        var resolved: [WorkflowType: HotkeyBinding] = [:]
-        for type in WorkflowType.allCases {
-            if let binding = newBindings[type.rawValue] {
-                resolved[type] = binding
-            } else if let def = HotkeyBinding.defaults[type] {
-                resolved[type] = def
-            }
-        }
-        self.bindings = resolved
+        self.bindings = newBindings
     }
 
-    func startRecording(for type: WorkflowType, completion: @escaping (HotkeyBinding) -> Void) {
-        recordingFor = type
+    func startRecording(for id: String, completion: @escaping (HotkeyBinding) -> Void) {
+        recordingFor = id
         recordingCompletion = completion
     }
 
@@ -197,11 +190,11 @@ final class HotkeyService {
         }
 
         // Normal mode: match modifier-only bindings
-        for (workflowType, binding) in bindings where binding.keyCode == 0xFFFF {
+        for (id, binding) in bindings where binding.keyCode == 0xFFFF {
             if flags == binding.nsModifierFlags {
                 guard activeCombo == nil else { return }
-                activeCombo = workflowType
-                onHotkeyEvent?(.down(workflowType))
+                activeCombo = id
+                onHotkeyEvent?(.down(id))
                 return
             }
         }
@@ -236,12 +229,12 @@ final class HotkeyService {
 
         // Normal mode: match key+modifier bindings
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        for (workflowType, binding) in bindings where binding.keyCode != 0xFFFF {
+        for (id, binding) in bindings where binding.keyCode != 0xFFFF {
             guard keyCode == binding.keyCode,
                   flags == binding.nsModifierFlags,
                   activeCombo == nil else { continue }
-            activeCombo = workflowType
-            onHotkeyEvent?(.down(workflowType))
+            activeCombo = id
+            onHotkeyEvent?(.down(id))
             return
         }
     }
