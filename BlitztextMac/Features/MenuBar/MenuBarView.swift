@@ -615,6 +615,8 @@ struct MenuBarView: View {
                     if let w = workflow as? EmojiTextWorkflow {
                         EmojiTextActiveView(workflow: w)
                     }
+                case .custom:
+                    EmptyView()
                 }
 
                 Spacer(minLength: 0)
@@ -645,6 +647,7 @@ struct MenuBarView: View {
         case .textImprover: return .purple
         case .dampfAblassen: return .orange
         case .emojiText: return .cyan
+        case .custom: return .pink
         }
     }
 }

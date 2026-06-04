@@ -703,7 +703,7 @@ struct CustomizeSettingsView: View {
                 SectionLabel(text: "Tastenk\u{00FC}rzel")
 
                 VStack(spacing: 6) {
-                    ForEach(WorkflowType.allCases) { workflowType in
+                    ForEach(WorkflowType.allCases.filter { $0 != .custom }) { workflowType in
                         HotkeyRecorderRow(workflowType: workflowType, appState: appState)
                     }
                 }

@@ -121,7 +121,7 @@ final class AppState {
             return "Online: Whisper über OpenAI."
         case .localTranscription:
             return "Nur lokal. Kein Server."
-        case .textImprover, .dampfAblassen, .emojiText:
+        case .textImprover, .dampfAblassen, .emojiText, .custom:
             if appSettings.secureLocalModeEnabled {
                 return "Im lokalen Modus pausiert."
             }
@@ -230,6 +230,10 @@ final class AppState {
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
             workflow.start()
+
+        case .custom:
+            // Custom workflows are launched via startCustomWorkflow(_:) in Task 5.
+            return
         }
 
         page = source.presentsWorkflowPage ? .workflow : .main
@@ -243,7 +247,7 @@ final class AppState {
             return appSettings.secureLocalModeEnabled
                 ? selectedLocalModelIsInstalled
                 : KeychainService.isConfigured
-        case .textImprover, .dampfAblassen, .emojiText:
+        case .textImprover, .dampfAblassen, .emojiText, .custom:
             return !appSettings.secureLocalModeEnabled
                 && KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
         }

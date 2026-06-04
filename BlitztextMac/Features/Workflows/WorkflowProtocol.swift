@@ -8,11 +8,12 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
     case textImprover
     case dampfAblassen
     case emojiText
+    case custom
 
     var id: String { rawValue }
 
     static var mainMenuCases: [WorkflowType] {
-        allCases.filter { $0 != .localTranscription }
+        allCases.filter { $0 != .localTranscription && $0 != .custom }
     }
 
     var displayName: String {
@@ -22,6 +23,7 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
         case .textImprover: return "Blitztext+"
         case .dampfAblassen: return "Blitztext $%&!"
         case .emojiText: return "Blitztext :)"
+        case .custom: return "Eigener Workflow"
         }
     }
 
@@ -32,6 +34,7 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
         case .textImprover: return "text.badge.checkmark"
         case .dampfAblassen: return "flame.fill"
         case .emojiText: return "face.smiling"
+        case .custom: return "sparkles"
         }
     }
 
@@ -42,6 +45,7 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
         case .textImprover: return "Geschrieben sprechen."
         case .dampfAblassen: return "Frust rein. Entspannt raus."
         case .emojiText: return "Text rein. Emojis dazu."
+        case .custom: return "Eigener Prompt."
         }
     }
 
@@ -52,6 +56,7 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
         case .textImprover: return "fn + Control"
         case .dampfAblassen: return "fn + Option"
         case .emojiText: return "fn + Cmd"
+        case .custom: return ""
         }
     }
 
@@ -62,6 +67,7 @@ enum WorkflowType: String, CaseIterable, Identifiable, Codable {
         case .textImprover: return "purple"
         case .dampfAblassen: return "orange"
         case .emojiText: return "cyan"
+        case .custom: return "pink"
         }
     }
 }
