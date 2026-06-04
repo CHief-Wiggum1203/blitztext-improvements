@@ -122,19 +122,25 @@ struct AppSettings: Codable {
     var secureLocalModeEnabled: Bool = false
     var selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName
     var hasAutoSelectedFastLocalModel: Bool = false
+    var llmBackend: LLMBackend = .openAI
+    var hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
 
     init(
         hotkeyMode: HotkeyMode = .hold,
         hasSeenOnboarding: Bool = false,
         secureLocalModeEnabled: Bool = false,
         selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName,
-        hasAutoSelectedFastLocalModel: Bool = false
+        hasAutoSelectedFastLocalModel: Bool = false,
+        llmBackend: LLMBackend = .openAI,
+        hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
     ) {
         self.hotkeyMode = hotkeyMode
         self.hasSeenOnboarding = hasSeenOnboarding
         self.secureLocalModeEnabled = secureLocalModeEnabled
         self.selectedLocalTranscriptionModelName = selectedLocalTranscriptionModelName
         self.hasAutoSelectedFastLocalModel = hasAutoSelectedFastLocalModel
+        self.llmBackend = llmBackend
+        self.hotkeyBindings = hotkeyBindings
     }
 
     enum CodingKeys: String, CodingKey {
@@ -143,6 +149,8 @@ struct AppSettings: Codable {
         case secureLocalModeEnabled
         case selectedLocalTranscriptionModelName
         case hasAutoSelectedFastLocalModel
+        case llmBackend
+        case hotkeyBindings
     }
 
     init(from decoder: Decoder) throws {
@@ -158,6 +166,9 @@ struct AppSettings: Codable {
             Bool.self,
             forKey: .hasAutoSelectedFastLocalModel
         ) ?? false
+        llmBackend = try container.decodeIfPresent(LLMBackend.self, forKey: .llmBackend) ?? .openAI
+        hotkeyBindings = try container.decodeIfPresent([String: HotkeyBinding].self, forKey: .hotkeyBindings)
+            ?? HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
     }
 }
 
@@ -166,10 +177,32 @@ enum TranscriptionBackend: String, Codable {
     case local
 }
 
+enum LLMBackend: String, Codable, CaseIterable, Identifiable {
+    case openAI
+    case claude
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .openAI: return "OpenAI"
+        case .claude: return "Claude (Anthropic)"
+        }
+    }
+
+    var keychainKey: KeychainKey {
+        switch self {
+        case .openAI: return .openAIAPIKey
+        case .claude: return .anthropicAPIKey
+        }
+    }
+}
+
 // MARK: - Workflow Settings
 
 struct TranscriptionSettings: Codable {
     var language: String = "de"
+    var onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe
 }
 
 struct DampfAblassenSettings: Codable {

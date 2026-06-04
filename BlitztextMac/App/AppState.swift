@@ -38,6 +38,10 @@ final class AppState {
     // Persisted settings
     var appSettings: AppSettings {
         didSet {
+            if oldValue.llmBackend != appSettings.llmBackend {
+                llmProvider = LLMService.makeProvider(backend: appSettings.llmBackend)
+            }
+            hotkeyService.updateBindings(appSettings.hotkeyBindings)
             saveSettings()
             prewarmLocalTranscriptionIfNeeded()
         }
@@ -60,8 +64,11 @@ final class AppState {
 
     // Computed
     var isConfigured: Bool {
-        KeychainService.isConfigured || !LocalTranscriptionService.installedModels().isEmpty
+        KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
+            || !LocalTranscriptionService.installedModels().isEmpty
     }
+
+    private(set) var llmProvider: any LLMProvider
     var shouldShowOnboarding: Bool {
         !isConfigured && !appSettings.hasSeenOnboarding
     }
@@ -71,11 +78,14 @@ final class AppState {
     }
 
     init() {
-        self.appSettings = Self.loadAppSettings()
+        let loadedAppSettings = Self.loadAppSettings()
+        self.appSettings = loadedAppSettings
+        self.llmProvider = LLMService.makeProvider(backend: loadedAppSettings.llmBackend)
         self.transcriptionSettings = Self.loadTranscriptionSettings()
         self.textImprovementSettings = Self.loadTextImprovementSettings()
         self.dampfAblassenSettings = Self.loadDampfAblassenSettings()
         self.emojiTextSettings = Self.loadEmojiTextSettings()
+        hotkeyService.updateBindings(loadedAppSettings.hotkeyBindings)
         refreshAccessibilityPermission()
         autoSelectFastLocalModelIfNeeded()
         prewarmLocalTranscriptionIfNeeded()
@@ -167,7 +177,8 @@ final class AppState {
                 customTerms: textImprovementSettings.customTerms,
                 language: transcriptionSettings.language,
                 backend: appSettings.secureLocalModeEnabled ? .local : .remote,
-                localModelName: selectedLocalModelName
+                localModelName: selectedLocalModelName,
+                onlineModel: transcriptionSettings.onlineModel
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -188,7 +199,9 @@ final class AppState {
         case .textImprover:
             let workflow = TextImprovementWorkflow(
                 settings: textImprovementSettings,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -198,7 +211,9 @@ final class AppState {
             let workflow = DampfAblassenWorkflow(
                 settings: dampfAblassenSettings,
                 customTerms: textImprovementSettings.customTerms,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -208,7 +223,9 @@ final class AppState {
             let workflow = EmojiTextWorkflow(
                 settings: emojiTextSettings,
                 customTerms: textImprovementSettings.customTerms,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -227,7 +244,8 @@ final class AppState {
                 ? selectedLocalModelIsInstalled
                 : KeychainService.isConfigured
         case .textImprover, .dampfAblassen, .emojiText:
-            return !appSettings.secureLocalModeEnabled && KeychainService.isConfigured
+            return !appSettings.secureLocalModeEnabled
+                && KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
         }
     }
 

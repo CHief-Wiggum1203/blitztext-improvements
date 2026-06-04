@@ -16,12 +16,16 @@ final class EmojiTextWorkflow: Workflow {
     private let settings: EmojiTextSettings
     private let customTerms: [String]
     private let language: String
+    private let onlineModel: OnlineTranscriptionModel
+    private let llmProvider: any LLMProvider
     private var processingTask: Task<Void, Never>?
 
-    init(settings: EmojiTextSettings, customTerms: [String] = [], language: String = "de") {
+    init(settings: EmojiTextSettings, customTerms: [String] = [], language: String = "de", onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe, llmProvider: any LLMProvider) {
         self.settings = settings
         self.customTerms = customTerms
         self.language = language
+        self.onlineModel = onlineModel
+        self.llmProvider = llmProvider
     }
 
     // MARK: - Recording State
@@ -86,7 +90,8 @@ final class EmojiTextWorkflow: Workflow {
                 let rawText = try await TranscriptionService.transcribe(
                     audioURL: url,
                     customTerms: vocabularyHints,
-                    language: language
+                    language: language,
+                    model: onlineModel
                 )
                 let cleanedRawText = TranscriptionQualityService.cleanedTranscript(rawText)
                 guard !TranscriptionQualityService.isLikelyArtifact(cleanedRawText, recordingDuration: recordingDuration) else {
@@ -99,10 +104,7 @@ final class EmojiTextWorkflow: Workflow {
                 // Phase 2: Add emojis
                 phase = .running("Emojis werden eingef\u{00FC}gt ...")
 
-                let result = try await LLMService.addEmojis(
-                    text: cleanedRawText,
-                    settings: settings
-                )
+                let result = try await llmProvider.addEmojis(text: cleanedRawText, settings: settings)
                 let cleanedResult = TranscriptionQualityService.cleanedTranscript(result)
                 guard cleanedResult != "KEINE_AUFNAHME_ERKANNT" else {
                     phase = .error("Keine Aufnahme erkannt.")

@@ -62,6 +62,7 @@ struct AccessSettingsView: View {
 
     private enum FieldFocus {
         case openAIAPIKey
+        case anthropicAPIKey
     }
 
     @State private var launchAtLoginService = LaunchAtLoginService()
@@ -70,6 +71,10 @@ struct AccessSettingsView: View {
     @State private var editingAPIKey = false
     @State private var saved = false
     @State private var saveErrorText: String?
+    @State private var anthropicAPIKey = ""
+    @State private var editingAnthropicAPIKey = false
+    @State private var savedAnthropic = false
+    @State private var saveAnthropicErrorText: String?
     @State private var installActionErrorText: String?
     @State private var showCleanupOptions = false
     @State private var deleteLocalDataOnCleanup = true
@@ -110,6 +115,81 @@ struct AccessSettingsView: View {
                         appState.refreshAccessibilityPermission()
                     }
                     .buttonStyle(SubtleButtonStyle())
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel(text: "KI-Anbieter")
+
+                Picker("", selection: $appState.appSettings.llmBackend) {
+                    ForEach(LLMBackend.allCases) { backend in
+                        Text(backend.displayName).tag(backend)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: appState.appSettings.llmBackend) { _, _ in
+                    editingAnthropicAPIKey = false
+                    anthropicAPIKey = ""
+                }
+            }
+
+            if appState.appSettings.llmBackend == .claude {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        SectionLabel(text: "Anthropic API Key")
+                        Spacer()
+                        if appState.hasValue(for: .anthropicAPIKey) && !editingAnthropicAPIKey {
+                            Button("Ändern") {
+                                editingAnthropicAPIKey = true
+                                anthropicAPIKey = ""
+                                savedAnthropic = false
+                                saveAnthropicErrorText = nil
+                            }
+                            .font(.system(size: 10.5))
+                            .buttonStyle(SubtleButtonStyle())
+                        }
+                    }
+
+                    if !appState.hasValue(for: .anthropicAPIKey) || editingAnthropicAPIKey {
+                        SecureField("sk-ant-...", text: $anthropicAPIKey)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11))
+                            .focused($focusedField, equals: .anthropicAPIKey)
+
+                        HStack(spacing: 8) {
+                            Button("Speichern") {
+                                let trimmed = anthropicAPIKey.trimmingCharacters(in: .whitespaces)
+                                guard !trimmed.isEmpty else { return }
+                                do {
+                                    try KeychainService.save(key: .anthropicAPIKey, value: trimmed)
+                                    anthropicAPIKey = ""
+                                    editingAnthropicAPIKey = false
+                                    savedAnthropic = true
+                                    saveAnthropicErrorText = nil
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { savedAnthropic = false }
+                                } catch {
+                                    saveAnthropicErrorText = error.localizedDescription
+                                }
+                            }
+                            .buttonStyle(SubtleButtonStyle())
+                            .disabled(anthropicAPIKey.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                            if savedAnthropic {
+                                Label("Gespeichert", systemImage: "checkmark.circle.fill")
+                                    .font(.system(size: 10.5))
+                                    .foregroundStyle(.green)
+                            }
+
+                            if let errText = saveAnthropicErrorText {
+                                Text(errText).font(.system(size: 10.5)).foregroundStyle(.red)
+                            }
+                        }
+                    } else {
+                        Text(appState.apiKeyDisplayValue(for: .anthropicAPIKey))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -593,21 +673,38 @@ struct CustomizeSettingsView: View {
                 }
             }
 
+            // MARK: Online-Transkription
+            if !appState.appSettings.secureLocalModeEnabled {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Online-Transkription")
+
+                    HStack(spacing: 8) {
+                        Text("Modell")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+
+                        Picker("", selection: $appState.transcriptionSettings.onlineModel) {
+                            ForEach(OnlineTranscriptionModel.allCases) { model in
+                                Text(model.displayName).tag(model)
+                            }
+                        }
+                        .labelsHidden()
+                        .controlSize(.small)
+                    }
+
+                    Text(appState.transcriptionSettings.onlineModel.subtitle)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             // MARK: Tastenkuerzel
             VStack(alignment: .leading, spacing: 10) {
                 SectionLabel(text: "Tastenk\u{00FC}rzel")
 
                 VStack(spacing: 6) {
-                    ForEach(WorkflowType.mainMenuCases) { type in
-                        HStack {
-                            Text(type.hotkeyLabel)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 124, alignment: .leading)
-                            Text(appState.displayName(for: type))
-                                .font(.system(size: 11.5, weight: .medium))
-                            Spacer()
-                        }
+                    ForEach(WorkflowType.allCases) { workflowType in
+                        HotkeyRecorderRow(workflowType: workflowType, appState: appState)
                     }
                 }
 

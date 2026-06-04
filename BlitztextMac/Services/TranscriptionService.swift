@@ -1,5 +1,29 @@
 import Foundation
 
+enum OnlineTranscriptionModel: String, Codable, CaseIterable, Identifiable {
+    case whisper1 = "whisper-1"
+    case gpt4oTranscribe = "gpt-4o-transcribe"
+    case gpt4oMiniTranscribe = "gpt-4o-mini-transcribe"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .whisper1: return "Whisper 1"
+        case .gpt4oTranscribe: return "GPT-4o Transcribe"
+        case .gpt4oMiniTranscribe: return "GPT-4o Mini Transcribe"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .whisper1: return "Älteres Modell, sehr günstig"
+        case .gpt4oTranscribe: return "Aktuell, beste Genauigkeit"
+        case .gpt4oMiniTranscribe: return "Schnell und kostengünstig"
+        }
+    }
+}
+
 enum TranscriptionError: LocalizedError {
     case noFile
     case notConfigured
@@ -29,7 +53,6 @@ private struct TranscriptionOpenAIErrorResponse: Decodable {
 }
 
 enum TranscriptionService {
-    private static let remoteModel = "whisper-1"
     private static let transcriptionsURL = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
 
     private static let session: URLSession = {
@@ -44,7 +67,8 @@ enum TranscriptionService {
     static func transcribe(
         audioURL: URL,
         customTerms: [String] = [],
-        language: String? = nil
+        language: String? = nil,
+        model: OnlineTranscriptionModel = .gpt4oTranscribe
     ) async throws -> String {
         guard let apiKey = KeychainService.load(key: .openAIAPIKey) else {
             throw TranscriptionError.notConfigured
@@ -75,7 +99,7 @@ enum TranscriptionService {
 
             body.append("--\(boundary)\r\n")
             body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n")
-            body.append(remoteModel)
+            body.append(model.rawValue)
             body.append("\r\n")
 
             body.append("--\(boundary)\r\n")

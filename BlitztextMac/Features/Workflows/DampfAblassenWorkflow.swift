@@ -16,12 +16,16 @@ final class DampfAblassenWorkflow: Workflow {
     private let settings: DampfAblassenSettings
     private let customTerms: [String]
     private let language: String
+    private let onlineModel: OnlineTranscriptionModel
+    private let llmProvider: any LLMProvider
     private var processingTask: Task<Void, Never>?
 
-    init(settings: DampfAblassenSettings, customTerms: [String] = [], language: String = "de") {
+    init(settings: DampfAblassenSettings, customTerms: [String] = [], language: String = "de", onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe, llmProvider: any LLMProvider) {
         self.settings = settings
         self.customTerms = customTerms
         self.language = language
+        self.onlineModel = onlineModel
+        self.llmProvider = llmProvider
     }
 
     // MARK: - Recording State
@@ -86,7 +90,8 @@ final class DampfAblassenWorkflow: Workflow {
                 let rawText = try await TranscriptionService.transcribe(
                     audioURL: url,
                     customTerms: vocabularyHints,
-                    language: language
+                    language: language,
+                    model: onlineModel
                 )
                 let cleanedRawText = TranscriptionQualityService.cleanedTranscript(rawText)
                 guard !TranscriptionQualityService.isLikelyArtifact(cleanedRawText, recordingDuration: recordingDuration) else {
@@ -99,10 +104,7 @@ final class DampfAblassenWorkflow: Workflow {
                 // Phase 2: GPT dampf ablassen
                 phase = .running("Wird umformuliert ...")
 
-                let answer = try await LLMService.dampfAblassen(
-                    text: cleanedRawText,
-                    systemPrompt: settings.systemPrompt
-                )
+                let answer = try await llmProvider.dampfAblassen(text: cleanedRawText, systemPrompt: settings.systemPrompt)
                 let cleanedAnswer = TranscriptionQualityService.cleanedTranscript(answer)
                 guard cleanedAnswer != "KEINE_AUFNAHME_ERKANNT" else {
                     phase = .error("Keine Aufnahme erkannt.")
