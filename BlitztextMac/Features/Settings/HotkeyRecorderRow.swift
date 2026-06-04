@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HotkeyRecorderRow: View {
     let workflowType: WorkflowType
-    @Bindable var appState: AppState
+    var appState: AppState
 
     @State private var isRecording = false
     @State private var conflictWarning: String? = nil
@@ -50,6 +50,7 @@ struct HotkeyRecorderRow: View {
     }
 
     private func startRecording() {
+        guard !isRecording else { return }
         conflictWarning = nil
         isRecording = true
         appState.hotkeyService.startRecording(for: workflowType) { newBinding in
@@ -71,5 +72,6 @@ struct HotkeyRecorderRow: View {
     private func stopRecording() {
         appState.hotkeyService.stopRecording()
         isRecording = false
+        conflictWarning = nil
     }
 }
