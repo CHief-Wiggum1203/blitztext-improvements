@@ -593,6 +593,31 @@ struct CustomizeSettingsView: View {
                 }
             }
 
+            // MARK: Online-Transkription
+            if !appState.appSettings.secureLocalModeEnabled {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Online-Transkription")
+
+                    HStack(spacing: 8) {
+                        Text("Modell")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+
+                        Picker("", selection: $appState.transcriptionSettings.onlineModel) {
+                            ForEach(OnlineTranscriptionModel.allCases) { model in
+                                Text(model.displayName).tag(model)
+                            }
+                        }
+                        .labelsHidden()
+                        .controlSize(.small)
+                    }
+
+                    Text(appState.transcriptionSettings.onlineModel.subtitle)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             // MARK: Tastenkuerzel
             VStack(alignment: .leading, spacing: 10) {
                 SectionLabel(text: "Tastenk\u{00FC}rzel")

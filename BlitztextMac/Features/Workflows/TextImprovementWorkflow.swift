@@ -15,11 +15,13 @@ final class TextImprovementWorkflow: Workflow {
     private let recorder = AudioRecorder()
     private let settings: TextImprovementSettings
     private let language: String
+    private let onlineModel: OnlineTranscriptionModel
     private var processingTask: Task<Void, Never>?
 
-    init(settings: TextImprovementSettings, language: String = "de") {
+    init(settings: TextImprovementSettings, language: String = "de", onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe) {
         self.settings = settings
         self.language = language
+        self.onlineModel = onlineModel
     }
 
     // MARK: - Recording State
@@ -84,7 +86,8 @@ final class TextImprovementWorkflow: Workflow {
                 let rawText = try await TranscriptionService.transcribe(
                     audioURL: url,
                     customTerms: vocabularyHints,
-                    language: language
+                    language: language,
+                    model: onlineModel
                 )
                 let cleanedRawText = TranscriptionQualityService.cleanedTranscript(rawText)
                 guard !TranscriptionQualityService.isLikelyArtifact(cleanedRawText, recordingDuration: recordingDuration) else {

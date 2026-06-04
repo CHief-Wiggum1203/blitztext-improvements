@@ -16,12 +16,14 @@ final class DampfAblassenWorkflow: Workflow {
     private let settings: DampfAblassenSettings
     private let customTerms: [String]
     private let language: String
+    private let onlineModel: OnlineTranscriptionModel
     private var processingTask: Task<Void, Never>?
 
-    init(settings: DampfAblassenSettings, customTerms: [String] = [], language: String = "de") {
+    init(settings: DampfAblassenSettings, customTerms: [String] = [], language: String = "de", onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe) {
         self.settings = settings
         self.customTerms = customTerms
         self.language = language
+        self.onlineModel = onlineModel
     }
 
     // MARK: - Recording State
@@ -86,7 +88,8 @@ final class DampfAblassenWorkflow: Workflow {
                 let rawText = try await TranscriptionService.transcribe(
                     audioURL: url,
                     customTerms: vocabularyHints,
-                    language: language
+                    language: language,
+                    model: onlineModel
                 )
                 let cleanedRawText = TranscriptionQualityService.cleanedTranscript(rawText)
                 guard !TranscriptionQualityService.isLikelyArtifact(cleanedRawText, recordingDuration: recordingDuration) else {

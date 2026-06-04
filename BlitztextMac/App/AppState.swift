@@ -167,7 +167,8 @@ final class AppState {
                 customTerms: textImprovementSettings.customTerms,
                 language: transcriptionSettings.language,
                 backend: appSettings.secureLocalModeEnabled ? .local : .remote,
-                localModelName: selectedLocalModelName
+                localModelName: selectedLocalModelName,
+                onlineModel: transcriptionSettings.onlineModel
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -188,7 +189,8 @@ final class AppState {
         case .textImprover:
             let workflow = TextImprovementWorkflow(
                 settings: textImprovementSettings,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -198,7 +200,8 @@ final class AppState {
             let workflow = DampfAblassenWorkflow(
                 settings: dampfAblassenSettings,
                 customTerms: textImprovementSettings.customTerms,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -208,7 +211,8 @@ final class AppState {
             let workflow = EmojiTextWorkflow(
                 settings: emojiTextSettings,
                 customTerms: textImprovementSettings.customTerms,
-                language: transcriptionSettings.language
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
