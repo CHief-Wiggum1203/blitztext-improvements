@@ -122,19 +122,22 @@ struct AppSettings: Codable {
     var secureLocalModeEnabled: Bool = false
     var selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName
     var hasAutoSelectedFastLocalModel: Bool = false
+    var llmBackend: LLMBackend = .openAI
 
     init(
         hotkeyMode: HotkeyMode = .hold,
         hasSeenOnboarding: Bool = false,
         secureLocalModeEnabled: Bool = false,
         selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName,
-        hasAutoSelectedFastLocalModel: Bool = false
+        hasAutoSelectedFastLocalModel: Bool = false,
+        llmBackend: LLMBackend = .openAI
     ) {
         self.hotkeyMode = hotkeyMode
         self.hasSeenOnboarding = hasSeenOnboarding
         self.secureLocalModeEnabled = secureLocalModeEnabled
         self.selectedLocalTranscriptionModelName = selectedLocalTranscriptionModelName
         self.hasAutoSelectedFastLocalModel = hasAutoSelectedFastLocalModel
+        self.llmBackend = llmBackend
     }
 
     enum CodingKeys: String, CodingKey {
@@ -143,6 +146,7 @@ struct AppSettings: Codable {
         case secureLocalModeEnabled
         case selectedLocalTranscriptionModelName
         case hasAutoSelectedFastLocalModel
+        case llmBackend
     }
 
     init(from decoder: Decoder) throws {
@@ -158,12 +162,34 @@ struct AppSettings: Codable {
             Bool.self,
             forKey: .hasAutoSelectedFastLocalModel
         ) ?? false
+        llmBackend = try container.decodeIfPresent(LLMBackend.self, forKey: .llmBackend) ?? .openAI
     }
 }
 
 enum TranscriptionBackend: String, Codable {
     case remote
     case local
+}
+
+enum LLMBackend: String, Codable, CaseIterable, Identifiable {
+    case openAI
+    case claude
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .openAI: return "OpenAI"
+        case .claude: return "Claude (Anthropic)"
+        }
+    }
+
+    var keychainKey: KeychainKey {
+        switch self {
+        case .openAI: return .openAIAPIKey
+        case .claude: return .anthropicAPIKey
+        }
+    }
 }
 
 // MARK: - Workflow Settings

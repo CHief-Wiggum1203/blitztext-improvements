@@ -62,6 +62,7 @@ struct AccessSettingsView: View {
 
     private enum FieldFocus {
         case openAIAPIKey
+        case anthropicAPIKey
     }
 
     @State private var launchAtLoginService = LaunchAtLoginService()
@@ -70,6 +71,10 @@ struct AccessSettingsView: View {
     @State private var editingAPIKey = false
     @State private var saved = false
     @State private var saveErrorText: String?
+    @State private var anthropicAPIKey = ""
+    @State private var editingAnthropicAPIKey = false
+    @State private var savedAnthropic = false
+    @State private var saveAnthropicErrorText: String?
     @State private var installActionErrorText: String?
     @State private var showCleanupOptions = false
     @State private var deleteLocalDataOnCleanup = true
@@ -110,6 +115,74 @@ struct AccessSettingsView: View {
                         appState.refreshAccessibilityPermission()
                     }
                     .buttonStyle(SubtleButtonStyle())
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel(text: "KI-Anbieter")
+
+                Picker("", selection: $appState.appSettings.llmBackend) {
+                    ForEach(LLMBackend.allCases) { backend in
+                        Text(backend.displayName).tag(backend)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            if appState.appSettings.llmBackend == .claude {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        SectionLabel(text: "Anthropic API Key")
+                        Spacer()
+                        if appState.hasValue(for: .anthropicAPIKey) && !editingAnthropicAPIKey {
+                            Button("Ändern") {
+                                editingAnthropicAPIKey = true
+                                anthropicAPIKey = ""
+                            }
+                            .font(.system(size: 10.5))
+                            .buttonStyle(SubtleButtonStyle())
+                        }
+                    }
+
+                    if !appState.hasValue(for: .anthropicAPIKey) || editingAnthropicAPIKey {
+                        SecureField("sk-ant-...", text: $anthropicAPIKey)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11))
+                            .focused($focusedField, equals: .anthropicAPIKey)
+
+                        HStack(spacing: 8) {
+                            Button("Speichern") {
+                                let trimmed = anthropicAPIKey.trimmingCharacters(in: .whitespaces)
+                                do {
+                                    try KeychainService.save(key: .anthropicAPIKey, value: trimmed)
+                                    anthropicAPIKey = ""
+                                    editingAnthropicAPIKey = false
+                                    savedAnthropic = true
+                                    saveAnthropicErrorText = nil
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { savedAnthropic = false }
+                                } catch {
+                                    saveAnthropicErrorText = error.localizedDescription
+                                }
+                            }
+                            .buttonStyle(SubtleButtonStyle())
+                            .disabled(anthropicAPIKey.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                            if savedAnthropic {
+                                Label("Gespeichert", systemImage: "checkmark.circle.fill")
+                                    .font(.system(size: 10.5))
+                                    .foregroundStyle(.green)
+                            }
+
+                            if let errText = saveAnthropicErrorText {
+                                Text(errText).font(.system(size: 10.5)).foregroundStyle(.red)
+                            }
+                        }
+                    } else {
+                        Text(appState.apiKeyDisplayValue(for: .anthropicAPIKey))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 

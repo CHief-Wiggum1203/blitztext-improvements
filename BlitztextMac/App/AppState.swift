@@ -60,7 +60,12 @@ final class AppState {
 
     // Computed
     var isConfigured: Bool {
-        KeychainService.isConfigured || !LocalTranscriptionService.installedModels().isEmpty
+        KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
+            || !LocalTranscriptionService.installedModels().isEmpty
+    }
+
+    var llmProvider: any LLMProvider {
+        LLMService.makeProvider(backend: appSettings.llmBackend)
     }
     var shouldShowOnboarding: Bool {
         !isConfigured && !appSettings.hasSeenOnboarding
@@ -190,7 +195,8 @@ final class AppState {
             let workflow = TextImprovementWorkflow(
                 settings: textImprovementSettings,
                 language: transcriptionSettings.language,
-                onlineModel: transcriptionSettings.onlineModel
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -201,7 +207,8 @@ final class AppState {
                 settings: dampfAblassenSettings,
                 customTerms: textImprovementSettings.customTerms,
                 language: transcriptionSettings.language,
-                onlineModel: transcriptionSettings.onlineModel
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -212,7 +219,8 @@ final class AppState {
                 settings: emojiTextSettings,
                 customTerms: textImprovementSettings.customTerms,
                 language: transcriptionSettings.language,
-                onlineModel: transcriptionSettings.onlineModel
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
             )
             configureWorkflowHandlers(workflow)
             activeWorkflow = workflow
@@ -231,7 +239,8 @@ final class AppState {
                 ? selectedLocalModelIsInstalled
                 : KeychainService.isConfigured
         case .textImprover, .dampfAblassen, .emojiText:
-            return !appSettings.secureLocalModeEnabled && KeychainService.isConfigured
+            return !appSettings.secureLocalModeEnabled
+                && KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
         }
     }
 
