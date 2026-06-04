@@ -4,10 +4,22 @@ import Observation
 struct HotkeyBinding: Codable, Equatable {
     var keyCode: UInt16       // 0xFFFF = no regular key (modifier-only combo)
     var modifierFlags: UInt   // NSEvent.ModifierFlags.rawValue
-    var displayLabel: String
+
+    private enum CodingKeys: String, CodingKey {
+        case keyCode
+        case modifierFlags
+    }
 
     var nsModifierFlags: NSEvent.ModifierFlags {
         NSEvent.ModifierFlags(rawValue: modifierFlags)
+    }
+
+    var displayLabel: String {
+        if keyCode == 0xFFFF {
+            return HotkeyBinding.modifierOnlyLabel(nsModifierFlags)
+        } else {
+            return HotkeyBinding.keyLabel(keyCode, modifiers: nsModifierFlags)
+        }
     }
 
     static func modifierOnlyLabel(_ flags: NSEvent.ModifierFlags) -> String {
@@ -28,20 +40,21 @@ struct HotkeyBinding: Codable, Equatable {
         if modifiers.contains(.shift) { parts.append("⇧") }
         if modifiers.contains(.command) { parts.append("⌘") }
         if keyCode != 0xFFFF { parts.append(keyName(for: keyCode)) }
-        return parts.joined(separator: "")
+        return parts.joined(separator: " ")
     }
 
+    private static let keyNameMap: [UInt16: String] = [
+        0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X",
+        8: "C", 9: "V", 11: "B", 12: "Q", 13: "W", 14: "E", 15: "R",
+        16: "Y", 17: "T", 18: "1", 19: "2", 20: "3", 21: "4", 22: "6",
+        23: "5", 25: "9", 26: "7", 28: "8", 29: "0",
+        31: "O", 32: "U", 34: "I", 35: "P", 37: "L",
+        38: "J", 40: "K", 45: "N", 46: "M",
+        49: "Space", 51: "⌫", 123: "←", 124: "→", 125: "↓", 126: "↑"
+    ]
+
     private static func keyName(for keyCode: UInt16) -> String {
-        let map: [UInt16: String] = [
-            0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X",
-            8: "C", 9: "V", 11: "B", 12: "Q", 13: "W", 14: "E", 15: "R",
-            16: "Y", 17: "T", 18: "1", 19: "2", 20: "3", 21: "4", 22: "6",
-            23: "5", 25: "9", 26: "7", 28: "8", 29: "0",
-            31: "O", 32: "U", 34: "I", 35: "P", 37: "L",
-            38: "J", 40: "K", 45: "N", 46: "M",
-            49: "Space", 51: "⌫", 123: "←", 124: "→", 125: "↓", 126: "↑"
-        ]
-        return map[keyCode] ?? "?"
+        return keyNameMap[keyCode] ?? "?"
     }
 }
 
@@ -49,28 +62,23 @@ extension HotkeyBinding {
     static let defaults: [WorkflowType: HotkeyBinding] = [
         .transcription: HotkeyBinding(
             keyCode: 0xFFFF,
-            modifierFlags: NSEvent.ModifierFlags.function.union(.shift).rawValue,
-            displayLabel: "fn ⇧"
+            modifierFlags: NSEvent.ModifierFlags.function.union(.shift).rawValue
         ),
         .localTranscription: HotkeyBinding(
             keyCode: 0xFFFF,
-            modifierFlags: NSEvent.ModifierFlags.function.union(.shift).union(.control).rawValue,
-            displayLabel: "fn ⇧ ⌃"
+            modifierFlags: NSEvent.ModifierFlags.function.union(.shift).union(.control).rawValue
         ),
         .textImprover: HotkeyBinding(
             keyCode: 0xFFFF,
-            modifierFlags: NSEvent.ModifierFlags.function.union(.control).rawValue,
-            displayLabel: "fn ⌃"
+            modifierFlags: NSEvent.ModifierFlags.function.union(.control).rawValue
         ),
         .dampfAblassen: HotkeyBinding(
             keyCode: 0xFFFF,
-            modifierFlags: NSEvent.ModifierFlags.function.union(.option).rawValue,
-            displayLabel: "fn ⌥"
+            modifierFlags: NSEvent.ModifierFlags.function.union(.option).rawValue
         ),
         .emojiText: HotkeyBinding(
             keyCode: 0xFFFF,
-            modifierFlags: NSEvent.ModifierFlags.function.union(.command).rawValue,
-            displayLabel: "fn ⌘"
+            modifierFlags: NSEvent.ModifierFlags.function.union(.command).rawValue
         ),
     ]
 }
