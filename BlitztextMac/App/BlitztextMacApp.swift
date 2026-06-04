@@ -76,12 +76,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func handleHotkeyDown(_ id: String) {
         if let type = WorkflowType(rawValue: id) {
             handleBuiltInHotkeyDown(type)
-        } else if let uuid = CustomWorkflow.parseHotkeyBindingKey(id) {
-            // TODO (Task 5): launch CustomWorkflow with this UUID.
-            guard appState.appSettings.customWorkflows.contains(where: { $0.id == uuid }) else { return }
-            // Intentionally no-op for Task 4.
+        } else if let uuid = CustomWorkflow.parseHotkeyBindingKey(id),
+                  let customWorkflow = appState.appSettings.customWorkflows.first(where: { $0.id == uuid }) {
+            handleCustomHotkeyDown(customWorkflow)
         }
         // Unknown id: ignore.
+    }
+
+    private func handleCustomHotkeyDown(_ customWorkflow: CustomWorkflow) {
+        guard appState.isConfigured else { return }
+
+        let mode = appState.appSettings.hotkeyMode
+
+        switch mode {
+        case .hold:
+            // Hold mode: start workflow on key down
+            appState.startCustomWorkflow(customWorkflow, source: .hotkeyBackground)
+
+        case .toggle:
+            // Toggle mode: if the same custom workflow is already active, stop it.
+            if let active = appState.activeWorkflow,
+               active.phase.isActive,
+               isActiveCustomWorkflow(active, matching: customWorkflow) {
+                active.stop()
+            } else {
+                appState.prepareForPopoverPresentation()
+                appState.startCustomWorkflow(customWorkflow, source: .manual)
+                showPopover()
+            }
+        }
+    }
+
+    private func isActiveCustomWorkflow(_ active: any Workflow, matching customWorkflow: CustomWorkflow) -> Bool {
+        if let voice = active as? CustomVoiceWorkflow {
+            return voice.customWorkflow.id == customWorkflow.id
+        }
+        if let selection = active as? CustomSelectionWorkflow {
+            return selection.customWorkflow.id == customWorkflow.id
+        }
+        return false
     }
 
     private func handleBuiltInHotkeyDown(_ type: WorkflowType) {
@@ -111,10 +144,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func handleHotkeyUp(_ id: String) {
         if let type = WorkflowType(rawValue: id) {
             handleBuiltInHotkeyUp(type)
-        } else if CustomWorkflow.parseHotkeyBindingKey(id) != nil {
-            // TODO (Task 5): handle hold-mode key release for custom workflows.
+        } else if let uuid = CustomWorkflow.parseHotkeyBindingKey(id),
+                  let customWorkflow = appState.appSettings.customWorkflows.first(where: { $0.id == uuid }) {
+            handleCustomHotkeyUp(customWorkflow)
         }
         // Unknown id: ignore.
+    }
+
+    private func handleCustomHotkeyUp(_ customWorkflow: CustomWorkflow) {
+        let mode = appState.appSettings.hotkeyMode
+
+        guard mode == .hold else { return }
+
+        // Hold mode: stop workflow on key release if it matches the active custom workflow.
+        if let active = appState.activeWorkflow,
+           isActiveCustomWorkflow(active, matching: customWorkflow),
+           case .running = active.phase {
+            active.stop()
+        }
     }
 
     private func handleBuiltInHotkeyUp(_ type: WorkflowType) {
@@ -133,7 +180,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func handleHotkeyCancel() {
-        appState.activeWorkflow?.stop()
+        // Escape semantically cancels the active workflow — use reset() so that
+        // pending recordings/processing are discarded rather than committed.
+        // Custom workflows also respond correctly to reset() (no LLM call is fired).
+        appState.activeWorkflow?.reset()
     }
 
     @objc private func togglePopover() {

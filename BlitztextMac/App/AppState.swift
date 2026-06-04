@@ -232,9 +232,46 @@ final class AppState {
             workflow.start()
 
         case .custom:
-            // Custom workflows are launched via startCustomWorkflow(_:) in Task 5.
+            // Custom workflows are launched via startCustomWorkflow(_:source:).
             return
         }
+
+        page = source.presentsWorkflowPage ? .workflow : .main
+    }
+
+    func startCustomWorkflow(_ customWorkflow: CustomWorkflow, source: WorkflowLaunchSource = .manual) {
+        guard isCustomWorkflowAvailable(customWorkflow) else {
+            if source == .manual {
+                page = .settings
+            }
+            return
+        }
+
+        activeWorkflow?.stop()
+        menuBarStatusResetTask?.cancel()
+        workflowCleanupTask?.cancel()
+        activeLaunchSource = source
+        activePasteTarget = capturePasteTarget(for: source)
+
+        let workflow: any Workflow
+        switch customWorkflow.mode {
+        case .voice:
+            workflow = CustomVoiceWorkflow(
+                customWorkflow: customWorkflow,
+                language: transcriptionSettings.language,
+                onlineModel: transcriptionSettings.onlineModel,
+                llmProvider: llmProvider
+            )
+        case .selection:
+            workflow = CustomSelectionWorkflow(
+                customWorkflow: customWorkflow,
+                llmProvider: llmProvider
+            )
+        }
+
+        configureWorkflowHandlers(workflow)
+        activeWorkflow = workflow
+        workflow.start()
 
         page = source.presentsWorkflowPage ? .workflow : .main
     }
@@ -251,6 +288,10 @@ final class AppState {
             return !appSettings.secureLocalModeEnabled
                 && KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil
         }
+    }
+
+    func isCustomWorkflowAvailable(_ customWorkflow: CustomWorkflow) -> Bool {
+        return isWorkflowAvailable(.custom)
     }
 
     func stopCurrentWorkflow() {
