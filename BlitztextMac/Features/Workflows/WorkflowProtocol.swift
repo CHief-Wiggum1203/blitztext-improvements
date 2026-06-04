@@ -123,6 +123,7 @@ struct AppSettings: Codable {
     var selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName
     var hasAutoSelectedFastLocalModel: Bool = false
     var llmBackend: LLMBackend = .openAI
+    var hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
 
     init(
         hotkeyMode: HotkeyMode = .hold,
@@ -130,7 +131,8 @@ struct AppSettings: Codable {
         secureLocalModeEnabled: Bool = false,
         selectedLocalTranscriptionModelName: String = LocalTranscriptionService.recommendedFastModelName,
         hasAutoSelectedFastLocalModel: Bool = false,
-        llmBackend: LLMBackend = .openAI
+        llmBackend: LLMBackend = .openAI,
+        hotkeyBindings: [String: HotkeyBinding] = HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
     ) {
         self.hotkeyMode = hotkeyMode
         self.hasSeenOnboarding = hasSeenOnboarding
@@ -138,6 +140,7 @@ struct AppSettings: Codable {
         self.selectedLocalTranscriptionModelName = selectedLocalTranscriptionModelName
         self.hasAutoSelectedFastLocalModel = hasAutoSelectedFastLocalModel
         self.llmBackend = llmBackend
+        self.hotkeyBindings = hotkeyBindings
     }
 
     enum CodingKeys: String, CodingKey {
@@ -147,6 +150,7 @@ struct AppSettings: Codable {
         case selectedLocalTranscriptionModelName
         case hasAutoSelectedFastLocalModel
         case llmBackend
+        case hotkeyBindings
     }
 
     init(from decoder: Decoder) throws {
@@ -163,6 +167,8 @@ struct AppSettings: Codable {
             forKey: .hasAutoSelectedFastLocalModel
         ) ?? false
         llmBackend = try container.decodeIfPresent(LLMBackend.self, forKey: .llmBackend) ?? .openAI
+        hotkeyBindings = try container.decodeIfPresent([String: HotkeyBinding].self, forKey: .hotkeyBindings)
+            ?? HotkeyBinding.defaults.reduce(into: [:]) { $0[$1.key.rawValue] = $1.value }
     }
 }
 
