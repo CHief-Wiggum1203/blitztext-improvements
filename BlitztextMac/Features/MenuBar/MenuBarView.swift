@@ -632,7 +632,25 @@ struct MenuBarView: View {
                         EmojiTextActiveView(workflow: w)
                     }
                 case .custom:
-                    EmptyView()
+                    if let voice = workflow as? CustomVoiceWorkflow {
+                        CustomWorkflowActiveView(
+                            mode: .voice,
+                            isRecording: voice.isRecording,
+                            audioLevel: voice.audioLevel,
+                            phase: voice.phase,
+                            onStop: { voice.stop() },
+                            onCancel: { appState.resetCurrentWorkflow() }
+                        )
+                    } else if let sel = workflow as? CustomSelectionWorkflow {
+                        CustomWorkflowActiveView(
+                            mode: .selection,
+                            isRecording: false,
+                            audioLevel: 0,
+                            phase: sel.phase,
+                            onStop: { sel.stop() },
+                            onCancel: { appState.resetCurrentWorkflow() }
+                        )
+                    }
                 }
 
                 Spacer(minLength: 0)

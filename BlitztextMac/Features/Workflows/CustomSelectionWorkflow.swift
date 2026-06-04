@@ -23,13 +23,12 @@ final class CustomSelectionWorkflow: Workflow {
 
     var isRecording: Bool { false }
 
+    /// Selection workflows perform their work on `start()` so they fire immediately whether
+    /// invoked from the menu or from a hold-mode hotkey (in hold-mode the API call usually
+    /// completes after key release, so `stop()` becomes a no-op cancel).
     func start() {
-        // Selection mode does its work on `stop()` so the press-and-release semantics
-        // match the other workflows. On `start()` we just signal "waiting" briefly.
+        processingTask?.cancel()
         phase = .running("Auswahl wird gelesen ...")
-    }
-
-    func stop() {
         processingTask = Task {
             do {
                 let selection = try await SelectionService.readSelection()
@@ -41,12 +40,22 @@ final class CustomSelectionWorkflow: Workflow {
                     prompt: customWorkflow.systemPrompt,
                     modelPreference: customWorkflow.modelPreference
                 )
+                if Task.isCancelled { return }
+
                 phase = .done(result)
                 onOutput?(result)
+            } catch is CancellationError {
+                phase = .idle
             } catch {
                 phase = .error(error.localizedDescription)
             }
         }
+    }
+
+    /// For Selection workflows the actual work happens on `start()`. If a task is still
+    /// in flight (e.g. hold-mode released early), cancel it.
+    func stop() {
+        processingTask?.cancel()
     }
 
     func reset() {
