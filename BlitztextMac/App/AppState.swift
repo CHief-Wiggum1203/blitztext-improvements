@@ -38,6 +38,9 @@ final class AppState {
     // Persisted settings
     var appSettings: AppSettings {
         didSet {
+            if oldValue.llmBackend != appSettings.llmBackend {
+                llmProvider = LLMService.makeProvider(backend: appSettings.llmBackend)
+            }
             saveSettings()
             prewarmLocalTranscriptionIfNeeded()
         }
@@ -64,9 +67,7 @@ final class AppState {
             || !LocalTranscriptionService.installedModels().isEmpty
     }
 
-    var llmProvider: any LLMProvider {
-        LLMService.makeProvider(backend: appSettings.llmBackend)
-    }
+    private(set) var llmProvider: any LLMProvider
     var shouldShowOnboarding: Bool {
         !isConfigured && !appSettings.hasSeenOnboarding
     }
@@ -76,7 +77,9 @@ final class AppState {
     }
 
     init() {
-        self.appSettings = Self.loadAppSettings()
+        let loadedAppSettings = Self.loadAppSettings()
+        self.appSettings = loadedAppSettings
+        self.llmProvider = LLMService.makeProvider(backend: loadedAppSettings.llmBackend)
         self.transcriptionSettings = Self.loadTranscriptionSettings()
         self.textImprovementSettings = Self.loadTextImprovementSettings()
         self.dampfAblassenSettings = Self.loadDampfAblassenSettings()

@@ -128,6 +128,10 @@ struct AccessSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .onChange(of: appState.appSettings.llmBackend) { _, _ in
+                    editingAnthropicAPIKey = false
+                    anthropicAPIKey = ""
+                }
             }
 
             if appState.appSettings.llmBackend == .claude {
@@ -139,6 +143,8 @@ struct AccessSettingsView: View {
                             Button("Ändern") {
                                 editingAnthropicAPIKey = true
                                 anthropicAPIKey = ""
+                                savedAnthropic = false
+                                saveAnthropicErrorText = nil
                             }
                             .font(.system(size: 10.5))
                             .buttonStyle(SubtleButtonStyle())
@@ -154,6 +160,7 @@ struct AccessSettingsView: View {
                         HStack(spacing: 8) {
                             Button("Speichern") {
                                 let trimmed = anthropicAPIKey.trimmingCharacters(in: .whitespaces)
+                                guard !trimmed.isEmpty else { return }
                                 do {
                                     try KeychainService.save(key: .anthropicAPIKey, value: trimmed)
                                     anthropicAPIKey = ""
