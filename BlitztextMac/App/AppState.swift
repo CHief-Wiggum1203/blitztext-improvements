@@ -41,6 +41,7 @@ final class AppState {
             if oldValue.llmBackend != appSettings.llmBackend {
                 llmProvider = LLMService.makeProvider(backend: appSettings.llmBackend)
             }
+            hotkeyService.updateBindings(appSettings.hotkeyBindings)
             saveSettings()
             prewarmLocalTranscriptionIfNeeded()
         }
@@ -84,6 +85,7 @@ final class AppState {
         self.textImprovementSettings = Self.loadTextImprovementSettings()
         self.dampfAblassenSettings = Self.loadDampfAblassenSettings()
         self.emojiTextSettings = Self.loadEmojiTextSettings()
+        hotkeyService.updateBindings(loadedAppSettings.hotkeyBindings)
         refreshAccessibilityPermission()
         autoSelectFastLocalModelIfNeeded()
         prewarmLocalTranscriptionIfNeeded()

@@ -113,97 +113,146 @@ enum HotkeyEvent {
 @Observable
 @MainActor
 final class HotkeyService {
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
-    private var keyMonitor: Any?
-    private var activeCombo: WorkflowType?  // Which combo is currently held
+    var bindings: [WorkflowType: HotkeyBinding] = HotkeyBinding.defaults
+
+    private var globalFlagsMonitor: Any?
+    private var localFlagsMonitor: Any?
+    private var globalKeyDownMonitor: Any?
+    private var globalKeyUpMonitor: Any?
+    private var activeCombo: WorkflowType?
+    private var lastRecordedFlags: NSEvent.ModifierFlags = []
+
+    // Recording state
+    private var recordingFor: WorkflowType?
+    private var recordingCompletion: ((HotkeyBinding) -> Void)?
 
     var onHotkeyEvent: ((HotkeyEvent) -> Void)?
 
     func start() {
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            Task { @MainActor in
-                self?.handleFlags(event)
-            }
+        globalFlagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            Task { @MainActor in self?.handleFlags(event) }
         }
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            Task { @MainActor in
-                self?.handleFlags(event)
-            }
+        localFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            Task { @MainActor in self?.handleFlags(event) }
             return event
         }
-        // Escape key monitor for toggle mode
-        keyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            Task { @MainActor in
-                if event.keyCode == 53 { // Escape
-                    self?.handleEscape()
-                }
-            }
+        globalKeyDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in self?.handleKeyDown(event) }
+        }
+        globalKeyUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyUp) { [weak self] event in
+            Task { @MainActor in self?.handleKeyUp(event) }
         }
     }
 
     func stop() {
-        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
-        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
-        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
-        globalMonitor = nil
-        localMonitor = nil
-        keyMonitor = nil
+        [globalFlagsMonitor, localFlagsMonitor, globalKeyDownMonitor, globalKeyUpMonitor]
+            .compactMap { $0 }
+            .forEach { NSEvent.removeMonitor($0) }
+        globalFlagsMonitor = nil
+        localFlagsMonitor = nil
+        globalKeyDownMonitor = nil
+        globalKeyUpMonitor = nil
+    }
+
+    func updateBindings(_ newBindings: [String: HotkeyBinding]) {
+        var resolved: [WorkflowType: HotkeyBinding] = [:]
+        for type in WorkflowType.allCases {
+            if let binding = newBindings[type.rawValue] {
+                resolved[type] = binding
+            } else if let def = HotkeyBinding.defaults[type] {
+                resolved[type] = def
+            }
+        }
+        self.bindings = resolved
+    }
+
+    func startRecording(for type: WorkflowType, completion: @escaping (HotkeyBinding) -> Void) {
+        recordingFor = type
+        recordingCompletion = completion
+    }
+
+    func stopRecording() {
+        recordingFor = nil
+        recordingCompletion = nil
+        lastRecordedFlags = []
     }
 
     private func handleFlags(_ event: NSEvent) {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
-        // fn + Shift + Control -> local transcription
-        if flags == [.function, .shift, .control] {
-            if activeCombo == nil {
-                activeCombo = .localTranscription
-                onHotkeyEvent?(.down(.localTranscription))
+        // Recording mode: capture modifier combo on release
+        if recordingFor != nil {
+            if !flags.isEmpty {
+                lastRecordedFlags = flags
+            } else if !lastRecordedFlags.isEmpty {
+                let captured = lastRecordedFlags
+                lastRecordedFlags = []
+                let binding = HotkeyBinding(keyCode: 0xFFFF, modifierFlags: captured.rawValue)
+                recordingFor = nil
+                let completion = recordingCompletion
+                recordingCompletion = nil
+                completion?(binding)
             }
             return
         }
 
-        // fn + Shift -> transcription
-        if flags == [.function, .shift] {
-            if activeCombo == nil {
-                activeCombo = .transcription
-                onHotkeyEvent?(.down(.transcription))
+        // Normal mode: match modifier-only bindings
+        for (workflowType, binding) in bindings where binding.keyCode == 0xFFFF {
+            if flags == binding.nsModifierFlags {
+                guard activeCombo == nil else { return }
+                activeCombo = workflowType
+                onHotkeyEvent?(.down(workflowType))
+                return
             }
-            return
         }
 
-        // fn + Control -> Textverbesserer
-        if flags == [.function, .control] {
-            if activeCombo == nil {
-                activeCombo = .textImprover
-                onHotkeyEvent?(.down(.textImprover))
-            }
-            return
-        }
-
-        // fn + Option -> Rage Mode
-        if flags == [.function, .option] {
-            if activeCombo == nil {
-                activeCombo = .dampfAblassen
-                onHotkeyEvent?(.down(.dampfAblassen))
-            }
-            return
-        }
-
-        // fn + Command -> Emoji Mode
-        if flags == [.function, .command] {
-            if activeCombo == nil {
-                activeCombo = .emojiText
-                onHotkeyEvent?(.down(.emojiText))
-            }
-            return
-        }
-
-        // Keys released -- fire up event
-        if let combo = activeCombo {
+        // Release: fire up event for active modifier-only combo
+        if let combo = activeCombo, bindings[combo]?.keyCode == 0xFFFF {
             activeCombo = nil
             onHotkeyEvent?(.up(combo))
         }
+    }
+
+    private func handleKeyDown(_ event: NSEvent) {
+        let keyCode = event.keyCode
+
+        // Escape: cancel
+        guard keyCode != 53 else {
+            handleEscape()
+            return
+        }
+
+        // Recording mode: capture key+modifier combo
+        if recordingFor != nil {
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let binding = HotkeyBinding(keyCode: keyCode, modifierFlags: flags.rawValue)
+            recordingFor = nil
+            let completion = recordingCompletion
+            recordingCompletion = nil
+            lastRecordedFlags = []
+            completion?(binding)
+            return
+        }
+
+        // Normal mode: match key+modifier bindings
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        for (workflowType, binding) in bindings where binding.keyCode != 0xFFFF {
+            guard keyCode == binding.keyCode,
+                  flags == binding.nsModifierFlags,
+                  activeCombo == nil else { continue }
+            activeCombo = workflowType
+            onHotkeyEvent?(.down(workflowType))
+            return
+        }
+    }
+
+    private func handleKeyUp(_ event: NSEvent) {
+        guard let combo = activeCombo,
+              let binding = bindings[combo],
+              binding.keyCode != 0xFFFF,
+              event.keyCode == binding.keyCode else { return }
+        activeCombo = nil
+        onHotkeyEvent?(.up(combo))
     }
 
     private func handleEscape() {
