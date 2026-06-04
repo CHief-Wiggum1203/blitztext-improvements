@@ -15,7 +15,7 @@ enum OnlineTranscriptionModel: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var description: String {
+    var subtitle: String {
         switch self {
         case .whisper1: return "Älteres Modell, sehr günstig"
         case .gpt4oTranscribe: return "Aktuell, beste Genauigkeit"
@@ -74,7 +74,6 @@ enum TranscriptionService {
             throw TranscriptionError.notConfigured
         }
 
-        let modelValue = model.rawValue
         return try await Task.detached(priority: .userInitiated) {
             defer {
                 try? FileManager.default.removeItem(at: audioURL)
@@ -100,7 +99,7 @@ enum TranscriptionService {
 
             body.append("--\(boundary)\r\n")
             body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n")
-            body.append(modelValue)
+            body.append(model.rawValue)
             body.append("\r\n")
 
             body.append("--\(boundary)\r\n")
