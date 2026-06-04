@@ -170,6 +170,7 @@ enum TranscriptionBackend: String, Codable {
 
 struct TranscriptionSettings: Codable {
     var language: String = "de"
+    var onlineModel: OnlineTranscriptionModel = .gpt4oTranscribe
 }
 
 struct DampfAblassenSettings: Codable {
