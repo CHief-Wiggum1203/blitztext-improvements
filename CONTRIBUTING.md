@@ -1,8 +1,10 @@
 # Contributing
 
-Thanks for taking a look at Blitztext macOS Preview.
+Thanks for taking a look at this Blitztext fork (**blitztext-improvements**).
 
-This repository is intentionally a preview. Contributions should make it easier to learn from, build, fork, or safely extend.
+Upstream lives at [cmagnussen/blitztext-app](https://github.com/cmagnussen/blitztext-app). Changes that belong in the original project should ideally be proposed there first.
+
+This fork adds custom workflows, Claude support, configurable hotkeys, and transcription model selection. Contributions here should extend or stabilize those features, or improve docs and tests around them.
 
 ## Good First Contributions
 

@@ -1,80 +1,120 @@
 # Setup
 
-This guide is for people who want to build and inspect the preview themselves.
+Anleitung zum Bauen und Konfigurieren dieses Forks ([blitztext-improvements](https://github.com/CHief-Wiggum1203/blitztext-improvements)).
 
-## 1. Requirements
+## 1. Voraussetzungen
 
-- macOS 14 or newer
-- Full Xcode, with Command Line Tools installed
-- XcodeGen
-- Homebrew, if you want to install XcodeGen with `brew install xcodegen`
-- Optional for online workflows: an OpenAI API key
-- Optional for secure local transcription: a local WhisperKit/CoreML model
+- macOS 14 oder neuer
+- Vollständiges Xcode mit Command Line Tools
+- XcodeGen (`brew install xcodegen`)
+- Optional: OpenAI API Key (Transkription und/oder Rewriting)
+- Optional: Anthropic API Key (wenn Claude als KI-Anbieter gewählt ist)
+- Optional: WhisperKit/CoreML-Modell für lokalen Modus
 
-Install XcodeGen manually if needed:
-
-```bash
-brew install xcodegen
-```
-
-## 2. Clone And Build
+## 2. Klonen und bauen
 
 ```bash
-git clone https://github.com/cmagnussen/blitztext-app.git
-cd blitztext-app
+git clone https://github.com/CHief-Wiggum1203/blitztext-improvements.git
+cd blitztext-improvements
 ./build.sh --debug
 ```
 
-To launch after building:
+App starten:
 
 ```bash
 ./build.sh --run
 ```
 
-## 3. Configure OpenAI For Online Workflows
+Oder direkt installieren:
 
-Open the app settings and paste your own OpenAI API key if you want online transcription or rewriting workflows.
+```bash
+./build.sh --install --run
+```
 
-The preview currently uses:
+## 3. Zugang konfigurieren (Tab „Zugang“)
 
-- `whisper-1` for transcription
-- `gpt-4o-mini` for lightweight rewriting
-- `gpt-4o` for the calmer-message workflow
+### KI-Anbieter
 
-You are responsible for API access, billing, and data handling in your own OpenAI account.
+Wähle **OpenAI** oder **Claude (Anthropic)**. Alle Rewriting-Workflows (Blitztext+, $%&!, :), eigene Workflows) nutzen den gewählten Anbieter.
 
-Never commit your API key into this repository, issues, logs, or screenshots.
+| Anbieter | Key | Verwendete Modelle |
+|---|---|---|
+| OpenAI | `sk-...` in Keychain | `gpt-4o-mini`, `gpt-4o` (Rage-Mode) |
+| Anthropic | `sk-ant-...` in Keychain | Haiku (schnell), Sonnet (genauer) |
 
-You can skip this step if you only want to test local transcription with a local WhisperKit model.
+Niemals API-Keys ins Repo, in Issues oder Screenshots packen.
 
-## 4. Optional Local Transcription
+### OpenAI für Transkription
 
-To use secure local transcription, choose a compatible WhisperKit CoreML model in the app and click **Installieren**. Blitztext stores models in:
+Online-Transkription läuft immer über OpenAI — unabhängig vom gewählten Rewriting-Anbieter. Der Key wird im Tab **Zugang** hinterlegt.
+
+Rewriting mit OpenAI als Anbieter nutzt denselben Key.
+
+## 4. Anpassen (Tab „Anpassen“)
+
+### Online-Transkriptionsmodell
+
+Nur sichtbar, wenn **Sicherer Lokaler Modus** aus ist:
+
+| Modell | Eigenschaft |
+|---|---|
+| Whisper 1 | Älter, sehr günstig |
+| GPT-4o Transcribe | Standard, beste Genauigkeit |
+| GPT-4o Mini Transcribe | Schnell und kostengünstig |
+
+### Hotkeys
+
+Jeder Standard-Workflow hat eine Zeile mit aktuellem Label und Button **Ändern**. Im Aufnahme-Modus die gewünschte Kombination drücken, **Esc** bricht ab. Bei Konflikten erscheint eine Warnung — nichts wird still überschrieben.
+
+Standard (wie im Original):
+
+- Blitztext: fn + Shift
+- Blitztext+: fn + Control
+- Blitztext $%&!: fn + Option
+- Blitztext :): fn + Command
+
+### Eigene Workflows
+
+Bis zu **5** Workflows anlegen:
+
+1. **Name** und **System-Prompt** (Anweisung an die KI)
+2. **Modus**: Sprache oder Auswahl
+3. **Modell**: Schnell oder Genau (fast/full beim Anbieter)
+4. **Symbol**: SF Symbol für Menüleiste
+5. **Tastenkürzel**: wie bei den Standard-Workflows
+
+**Sprache**: Hotkey halten → sprechen → loslassen → transkribieren → Prompt anwenden → einfügen.
+
+**Auswahl**: Text in einer App markieren → Hotkey → markierter Text wird gelesen → Prompt anwenden → einfügen.
+
+Eigene Workflows erscheinen in der Menüleisten-Popover-Liste.
+
+## 5. Optional: Lokale Transkription
+
+WhisperKit-Modell in der App wählen und **Installieren** klicken. Speicherort:
 
 ```text
 ~/Library/Application Support/Blitztext/models/whisperkit/
 ```
 
-Recommended first model: `openai_whisper-small_216MB`.
+Empfohlenes Erstmodell: `openai_whisper-small_216MB`. Details: [local-models.md](local-models.md).
 
-See [local-models.md](local-models.md) for the exact command, model links, and expected folder layout.
+Im **Sicheren Lokalen Modus** bleibt Audio auf dem Mac. Rewriting-Workflows (inkl. eigene Workflows mit Prompt) pausieren in diesem Modus weiterhin — sie brauchen einen Online-KI-Anbieter.
 
-## 5. macOS Permissions
+## 6. macOS-Berechtigungen
 
-The app needs Microphone permission to record audio.
+- **Mikrofon** — für Sprach-Workflows
+- **Bedienungshilfen** — für automatisches Einfügen per simuliertem Cmd+V
 
-For automatic paste into the previous app, grant Accessibility permission in macOS System Settings. Without it, you can still copy and paste manually.
-
-Blitztext does not need Full Disk Access. Auto-paste uses the Accessibility permission because the app simulates Cmd+V after putting the result on the clipboard.
+Blitztext braucht keinen Vollzugriff auf Festplatten.
 
 ## Troubleshooting
 
-- If `xcodebuild` reports that the active developer directory is only Command Line Tools, run `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
-- If the build cannot find XcodeGen, install it explicitly with `brew install xcodegen`.
-- If online transcription fails immediately, check whether the API key is present and valid.
-- If secure local mode is disabled, check whether a WhisperKit model is installed in the expected folder.
-- If transcription works but paste does not, this is not an OpenAI billing issue. Check **Privacy & Security -> Accessibility**, restart Blitztext after changing the permission, and make sure the cursor is focused in a text field before starting the workflow.
-- If macOS shows multiple Blitztext entries under Accessibility, remove or disable stale entries, run the app from the final location (`/Applications` if you used `./build.sh --install`), then grant the permission again.
-- If the target app blocks synthetic paste or the target app was not detected, the result still stays on the clipboard so you can press Cmd+V manually.
-- If audio is missing, check Microphone permission and macOS input settings.
-- If you see OpenAI errors, verify model access and account billing.
+- `xcodebuild` findet nur Command Line Tools → `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
+- XcodeGen fehlt → `brew install xcodegen`
+- Online-Transkription schlägt fehl → OpenAI-Key prüfen
+- Rewriting schlägt fehl → passenden Key für den gewählten KI-Anbieter prüfen
+- Auswahl-Workflow findet keinen Text → Text markieren, Fokus in der Quell-App, Bedienungshilfen erlaubt
+- Transkription ok, Paste nicht → Bedienungshilfen prüfen, App neu starten, Cursor im Textfeld
+- Mehrere Blitztext-Einträge unter Bedienungshilfen → alte entfernen, aktuelle App-Version freigeben
+- Ergebnis bleibt auf der Zwischenablage → manuell Cmd+V

@@ -2,7 +2,20 @@
 
 This is a preview roadmap, not a promise.
 
-## Current Scope
+This document covers the upstream direction and the extensions implemented in this fork.
+
+## Implemented In This Fork
+
+- LLM provider protocol with OpenAI and Claude backends
+- Online transcription model selection (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`)
+- Configurable hotkeys for all built-in workflows
+- Custom workflows (up to 5) with voice and selection modes
+- Selection service for reading marked text from other apps
+- Custom workflows in menu bar popover and settings editor
+
+See [docs/superpowers/specs/2026-06-04-blitztext-improvements-design.md](docs/superpowers/specs/2026-06-04-blitztext-improvements-design.md).
+
+## Current Scope (Upstream Base)
 
 - macOS menubar app
 - local recording and hotkeys
@@ -22,6 +35,13 @@ This is a preview roadmap, not a promise.
 - Reduce the Accessibility blast radius, ideally by moving synthetic paste into a smaller helper with narrower responsibilities.
 - Add stronger supply-chain checks around downloaded local speech models.
 - Add signed and notarized release builds when the project is ready for non-developer users.
+
+## Fork-Specific Ideas (Not Implemented Yet)
+
+- More than five custom workflows
+- Local rewriting without cloud APIs
+- Export/import custom workflow presets
+- Screenshot assets for fork showcase in `docs/screenshots/`
 
 ## Not In Scope Yet
 
