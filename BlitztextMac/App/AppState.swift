@@ -247,6 +247,13 @@ final class AppState {
             return
         }
 
+        guard !customWorkflow.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if source == .manual {
+                page = .settings
+            }
+            return
+        }
+
         activeWorkflow?.stop()
         menuBarStatusResetTask?.cancel()
         workflowCleanupTask?.cancel()
@@ -271,9 +278,38 @@ final class AppState {
 
         configureWorkflowHandlers(workflow)
         activeWorkflow = workflow
-        workflow.start()
 
         page = source.presentsWorkflowPage ? .workflow : .main
+
+        if customWorkflow.mode == .selection {
+            launchSelectionWorkflow(workflow as! CustomSelectionWorkflow, source: source)
+        } else {
+            workflow.start()
+        }
+    }
+
+    private func launchSelectionWorkflow(_ workflow: CustomSelectionWorkflow, source: WorkflowLaunchSource) {
+        let startWorkflow = { workflow.start() }
+
+        // When launched from the popover, Blitztext is frontmost — activate the target app first.
+        guard source == .manual else {
+            startWorkflow()
+            return
+        }
+
+        if isPopoverShown {
+            NotificationCenter.default.post(name: .dismissPopover, object: nil)
+        }
+
+        if let target = activePasteTarget {
+            target.application.activate(options: [])
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
+                startWorkflow()
+            }
+        } else {
+            startWorkflow()
+        }
     }
 
     func isWorkflowAvailable(_ type: WorkflowType) -> Bool {
@@ -291,7 +327,39 @@ final class AppState {
     }
 
     func isCustomWorkflowAvailable(_ customWorkflow: CustomWorkflow) -> Bool {
-        return isWorkflowAvailable(.custom)
+        guard !appSettings.secureLocalModeEnabled,
+              KeychainService.load(key: appSettings.llmBackend.keychainKey) != nil else {
+            return false
+        }
+
+        // Voice workflows always transcribe via OpenAI, even when Claude rewrites the text.
+        if customWorkflow.mode == .voice {
+            return KeychainService.isConfigured
+        }
+
+        return true
+    }
+
+    func workflowTitle(for workflow: any Workflow) -> String {
+        if let voice = workflow as? CustomVoiceWorkflow {
+            let name = voice.customWorkflow.name.trimmingCharacters(in: .whitespaces)
+            return name.isEmpty ? WorkflowType.custom.displayName : name
+        }
+        if let selection = workflow as? CustomSelectionWorkflow {
+            let name = selection.customWorkflow.name.trimmingCharacters(in: .whitespaces)
+            return name.isEmpty ? WorkflowType.custom.displayName : name
+        }
+        return displayName(for: workflow.type)
+    }
+
+    func workflowIconName(for workflow: any Workflow) -> String {
+        if let voice = workflow as? CustomVoiceWorkflow {
+            return voice.customWorkflow.symbolName
+        }
+        if let selection = workflow as? CustomSelectionWorkflow {
+            return selection.customWorkflow.symbolName
+        }
+        return workflow.type.icon
     }
 
     func stopCurrentWorkflow() {

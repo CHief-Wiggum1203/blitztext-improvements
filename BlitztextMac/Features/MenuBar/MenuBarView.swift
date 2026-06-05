@@ -600,10 +600,10 @@ struct MenuBarView: View {
                     Spacer()
 
                     HStack(spacing: 5) {
-                        Image(systemName: workflow.type.icon)
+                        Image(systemName: appState.workflowIconName(for: workflow))
                             .font(.system(size: 11))
                             .foregroundStyle(workflowIconColor(workflow.type))
-                        Text(appState.displayName(for: workflow.type))
+                        Text(appState.workflowTitle(for: workflow))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.primary)
                     }

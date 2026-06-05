@@ -94,6 +94,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             appState.startCustomWorkflow(customWorkflow, source: .hotkeyBackground)
 
         case .toggle:
+            if customWorkflow.mode == .selection {
+                // Selection workflows read from the frontmost app — keep the popover closed.
+                appState.startCustomWorkflow(customWorkflow, source: .hotkeyBackground)
+                return
+            }
+
             // Toggle mode: if the same custom workflow is already active, stop it.
             if let active = appState.activeWorkflow,
                active.phase.isActive,
