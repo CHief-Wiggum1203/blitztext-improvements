@@ -108,13 +108,50 @@ Prompt speichern = automatisch in Settings persistiert. **Hotkey testen**, bevor
 
 ## Screenshots (empfohlen)
 
-Noch nicht im Repo — vor der Einreichung ergänzen unter `docs/screenshots/`:
+Lege die Dateien unter `docs/screenshots/` ab. Für GitHub und Formular reichen **zwei**; das dritte Bild ist optional, aber stark.
 
-| Datei | Inhalt |
-|---|---|
-| `custom-workflows-settings.png` | Tab Anpassen, Bereich „Eigene Workflows“ |
-| `custom-workflow-selection.png` | Menüleiste mit eigenem Workflow aktiv |
-| `llm-backend-settings.png` | Tab Zugang, KI-Anbieter OpenAI/Claude |
+### Minimum (2 Screenshots — reicht fürs Formular)
+
+| # | Dateiname | Wann aufnehmen | Was sichtbar sein muss | Was weg muss |
+|---|---|---|---|---|
+| **1** | `custom-workflow-result.png` | **Sek. 25–35** deines Demo-Videos — Bullet-Points stehen in Notes | Notes mit **Rohtext + Ergebnis** (markiert oder Cursor in neuer Liste), Fenster groß genug zum Lesen | Menüleiste, Settings, API-Keys |
+| **2** | `custom-workflows-settings.png` | **Sek. 35–50** — Settings offen | Popover → Tab **Anpassen** → Karte **Bullet-Points**: Name, Prompt (2–3 Zeilen), Modus **Auswahl**, Hotkey-Label | Tab Zugang, Key-Felder, ganzer Prompt wenn er Secrets enthält |
+
+**Warum diese zwei:** Bild 1 = *„Es funktioniert“*, Bild 2 = *„So ist es gebaut“*.
+
+### Optional (3. Screenshot — Differenzierung)
+
+| # | Dateiname | Wann aufnehmen | Was sichtbar sein muss | Was weg muss |
+|---|---|---|---|---|
+| **3** | `llm-backend-settings.png` | Direkt nach Bild 2 oder eigener Schnitt | Tab **Zugang** → nur Segment **KI-Anbieter** (OpenAI / Claude) + ggf. Hinweis „Key gespeichert“ (maskiert) | Vollständiger Key, `sk-...` in Feldern |
+
+### Aus dem Video exportieren (macOS)
+
+1. Video in **QuickTime Player** öffnen  
+2. Zur gewünschten Stelle springen (Zeitleiste)  
+3. **Bearbeiten → Bild kopieren** (oder `Cmd+C` bei Pause)  
+4. **Vorschau** öffnen → **Ablage → Neu aus Zwischenablage**  
+5. **Ablage → Exportieren…** → Format **PNG** → Dateiname wie oben  
+6. In `docs/screenshots/` speichern
+
+Alternativ während der Aufnahme: **`Cmd+Shift+4`** → Bereich auswählen (schärfer als Video-Frame).
+
+### Qualitäts-Check vor dem Commit
+
+- [ ] Kein `sk-`, `sk-ant-`, API-Key, E-Mail, privater Text  
+- [ ] Schrift lesbar (Popover breit genug, nicht zu stark zuschneiden)  
+- [ ] Dateinamen **exakt** wie oben (README verlinkt später darauf)  
+- [ ] PNG, ca. 1200–1800 px breit reicht
+
+### Nach dem Hinzufügen
+
+```bash
+git add docs/screenshots/*.png
+git commit -m "docs: add fork showcase screenshots"
+git push origin main
+```
+
+README-Abschnitt „Screenshots“ kann dann um die zwei Fork-Bilder ergänzt werden.
 
 ## Checkliste vor dem Absenden
 
